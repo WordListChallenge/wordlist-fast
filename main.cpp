@@ -4,15 +4,30 @@
 #include <set>
 #include <codecvt>
 #include <locale>
+#include <unordered_set>
+#include <forward_list>
 
 using namespace std;
 
-const int LEN = 6;
+const unsigned int LEN = 6;
 
-vector<set<u16string>> buildVector(
+struct parsedList {
+
+    forward_list<u16string> wordsToCheck;
+    vector<unordered_set<u16string>> candidates;
+
+    parsedList(
+            forward_list<u16string> *wordToCheck,
+            vector<unordered_set<u16string>> *candidates) :
+            wordsToCheck(*wordToCheck),
+            candidates(*candidates) {};
+};
+
+parsedList *parseWordList(
+        forward_list<u16string> *wordsToCheck,
+        vector<unordered_set<u16string>> *candidates,
         wstring_convert<codecvt_utf8_utf16<char16_t>, char16_t> *utf16conv,
         char *fileName) {
-    vector<set<u16string>> vec(LEN);
     ifstream myfile(fileName);
     string utf8;
     if (myfile.is_open()) {
@@ -20,29 +35,34 @@ vector<set<u16string>> buildVector(
             u16string line = utf16conv->from_bytes(utf8);
             unsigned long len = line.size();
             if (len == LEN) {
-                // the bucket at zero contains all words of length LEN
-                set<u16string> &bucket = vec.at(0);
-                bucket.insert(line);
+                wordsToCheck->push_front(line);
             } else if (len > 0 && len < LEN) {
-                set<u16string> &bucket = vec.at(len);
+                unordered_set<u16string> &bucket = candidates->at(len - 1);
                 bucket.insert(line);
             }
         }
         myfile.close();
     } else cout << "Unable to open file";
-    return vec;
+    return new parsedList(wordsToCheck, candidates);
 }
 
+/**
+ * @param utf16conv String converter for printing.
+ * @param out The output stream that we're writing to.
+ * @param candidates A vector of length LEN - 1.
+ *   Words of length 1 are at zero, words of length 2 are at one, and so on.
+ * @param s The string that we're attempting to write as a concatenation of two candidates.
+ */
 void printPairs(
         wstring_convert<codecvt_utf8_utf16<char16_t>, char16_t> *utf16conv,
         ofstream *out,
-        vector<set<u16string>> *vec,
-        u16string s) {
-    for (int i = 1; i < LEN; ++i) {
-        set<u16string> &heads = vec->at(i);
-        set<u16string> &tails = vec->at(LEN - i);
-        u16string head = s.substr(0, i);
-        u16string tail = s.substr(i);
+        vector<unordered_set<u16string>> *candidates,
+        u16string *s) {
+    for (unsigned int len = LEN - 1; len != 0; --len) {
+        u16string head = s->substr(0, len);
+        u16string tail = s->substr(len);
+        unordered_set<u16string> &heads = candidates->at(len - 1);
+        unordered_set<u16string> &tails = candidates->at(LEN - 1 - len);
         bool headFound = heads.find(head) != heads.end();
         bool tailFound = tails.find(tail) != tails.end();
         if (headFound && tailFound) {
@@ -52,21 +72,22 @@ void printPairs(
 }
 
 void run(char *infile, char *outfile) {
-    // the UTF-8 / UTF-16 standard conversion facet
+    forward_list<u16string> wordsToCheck;
+    vector<unordered_set<u16string>> vec(LEN - 1);
     wstring_convert<codecvt_utf8_utf16<char16_t>, char16_t> utf16conv;
-    vector<set<u16string>> vec = buildVector(&utf16conv, infile);
-    set<u16string> &words = vec.at(0);
+    parsedList *parsedList = parseWordList(&wordsToCheck, &vec, &utf16conv, infile);
+    forward_list<u16string> &words = parsedList->wordsToCheck;
     ofstream out;
     out.open(outfile);
-    for (auto it = words.rbegin(); it != words.rend(); ++it) {
-        printPairs(&utf16conv, &out, &vec, *it);
+    for (auto &word : words) {
+        printPairs(&utf16conv, &out, &parsedList->candidates, &word);
     }
     out.close();
 }
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        cout << "Expecting two arguments: input_file output_file";
+        cout << "Expecting two arguments: input_file output_file\n";
         return 1;
     }
     char *infile = argv[1];
