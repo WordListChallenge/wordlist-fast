@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
-project(untitled)
+project(wordlist)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(untitled main.cpp)
+add_executable(wordlist main.cpp)

@@ -1,11 +1,12 @@
-/.idea
-
-/CMakeCache.txt
-/CMakeFiles
-/cmake_install.cmake
 /Makefile
+/.idea
 /output.txt
-/untitled
-/out.txt
-
+/build
+/wordlist
 *.cbp
+
+### CMake ###
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+install_manifest.txt
