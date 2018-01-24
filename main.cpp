@@ -7,8 +7,8 @@
 
 using namespace std;
 
-// we're trying to split all words of this length
-const unsigned int LEN = 6;
+// we're only interested in words of this length
+constexpr size_t LEN = 6;
 
 void read_input_file(
         forward_list<u16string> &candidates,
@@ -22,7 +22,7 @@ void read_input_file(
         unsigned long len = line.size();
         if (len == LEN) {
             candidates.push_front(line);
-        } else if (len != 0 && len < LEN) {
+        } else if (len < LEN) {
             fragments.insert(line);
         }
     }
@@ -40,7 +40,7 @@ inline void print_pairs(
         ofstream &out,
         unordered_set<u16string> &fragments,
         u16string &candidate) {
-    for (unsigned int len = LEN - 1; len != 0; --len) {
+    for (size_t len = LEN - 1; len != 0; --len) {
         u16string head = candidate.substr(0, len);
         bool head_found = fragments.find(head) != fragments.end();
         if (head_found) {
